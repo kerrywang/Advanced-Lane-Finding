@@ -49,8 +49,7 @@ class CameraCalibration(PipeLineInterface):
 
 
     def process(self, image):
-        img = cv2.imread(image)
-        dst = cv2.undistort(img, self.cameraMatrix, self.distortionCoeff, None, self.cameraMatrix)
+        dst = cv2.undistort(image, self.cameraMatrix, self.distortionCoeff, None, self.cameraMatrix)
 
         cv2.imshow('res', dst)
         cv2.waitKey(0)
@@ -58,4 +57,4 @@ class CameraCalibration(PipeLineInterface):
 
 if __name__ == "__main__":
     c = CameraCalibration()
-    c.process("/Users/kaiyuewang/Advanced-Lane-Finding/camera_cal/calibration1.jpg")
+    c.process(cv2.imread(os.path.join(constant.getCameraCalibrationFolderPath(), "calibration1.jpg")))

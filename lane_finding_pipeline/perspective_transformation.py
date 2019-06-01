@@ -2,6 +2,7 @@ import cv2
 import constant
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
 from lane_finding_pipeline.piplineinterface import PipeLineInterface
 
@@ -24,7 +25,7 @@ class PerspectiveTransform(PipeLineInterface):
 
 if __name__ == "__main__":
     a = PerspectiveTransform()
-    calibrationImgPath = constant.getCameraTransformationTrainingTarget()
+    calibrationImgPath = os.path.join(constant.getTestImagesDir(), "test3.jpg")
 
 
     img = a.process(cv2.imread(calibrationImgPath))
