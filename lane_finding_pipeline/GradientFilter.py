@@ -51,9 +51,9 @@ class SobelFilter(GradientFilter):
         self.kenelSize = sobel_kernel
 
     def process(self, image):
-        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-        sobelX = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=self.kenelSize)
-        sobelY = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=self.kenelSize)
+        # gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+        sobelX = cv2.Sobel(image, cv2.CV_64F, 1, 0, ksize=self.kenelSize)
+        sobelY = cv2.Sobel(image, cv2.CV_64F, 0, 1, ksize=self.kenelSize)
         if self.orientation == 'x':
             abs_sobel = np.absolute(sobelX)
         elif self.orientation == 'y':
@@ -63,7 +63,7 @@ class SobelFilter(GradientFilter):
         else: # direction filter
             abs_sobel = np.arctan2(np.absolute(sobelY), np.absolute(sobelX))
 
-        if self.orientation == 'dir':
+        if self.orientation != 'dir':
             scaled_sobel = np.uint8(255 * abs_sobel / np.max(abs_sobel))
         else:
             scaled_sobel = abs_sobel

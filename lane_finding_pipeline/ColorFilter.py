@@ -16,14 +16,18 @@ class ColorFilter(PipeLineInterface):
 
         if self.channel in rgb:
             imageBase = image[:, :, rgb.index(self.channel)]
-        else:
+        elif self.channel in hsl:
             imageBase = cv2.cvtColor(image, cv2.COLOR_RGB2HLS)
             imageBase = imageBase[:, :, hsl.index(self.channel)]
+        else:  # gray scale image
+            return cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
-        result = np.zeros_like(imageBase)
-        result[(imageBase > self.minThresh) & (imageBase <= self.maxThresh)] = 1.0
 
-        return np.uint8(result * 255)
+        # return imageBase
+        # result = np.zeros_like(imageBase)
+        # result[(imageBase > self.minThresh) & (imageBase <= self.maxThresh)] = 1.0
+        #
+        # return np.float64(result)
 
 if __name__ == "__main__":
     image = cv2.imread(os.path.join(constant.getTestImagesDir(), "test1.jpg"))

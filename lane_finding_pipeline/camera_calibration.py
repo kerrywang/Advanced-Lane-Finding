@@ -51,8 +51,8 @@ class CameraCalibration(PipeLineInterface):
     def process(self, image):
         dst = cv2.undistort(image, self.cameraMatrix, self.distortionCoeff, None, self.cameraMatrix)
 
-        cv2.imshow('res', dst)
-        cv2.waitKey(0)
+        return dst
+
 
 
 if __name__ == "__main__":
