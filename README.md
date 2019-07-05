@@ -109,4 +109,4 @@ Here's a [link to my video result](./project_video_output.mp4)
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-One thing i failed to handle is the challenge video where the dark background cause the lane finding to fail. If given time, i will probably tune further on the color masking part to account for that behavior
+One thing i failed to handle is the challenge video where the dark background cause the lane finding to fail. If given time, i will probably tune further on the color masking part to account for that behavior. Also i will test the segmentation using deep learning if i had more time. 
