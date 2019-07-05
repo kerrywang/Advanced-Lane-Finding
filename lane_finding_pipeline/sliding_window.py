@@ -5,10 +5,11 @@ from lane_finding_pipeline.piplineinterface import PipeLineInterface
 class LaneFinding(PipeLineInterface):
     def __init__(self, nwindow=9, nmargin=100, minpix=50):
         self.nwindows = nwindow
-        self.nmargin = nmargin
+        self.margin = nmargin
         self.minpix = minpix
         self.left_fit = None
         self.right_fit = None
+        self.curve_msg, self.offset_msg = "", ""
 
     def findHistogram(self, image):
         histogram = np.sum(image[image.shape[0] // 2:, :], axis=0)
@@ -81,10 +82,10 @@ class LaneFinding(PipeLineInterface):
             # Identify window boundaries in x and y (and right and left)
             win_y_low = image.shape[0] - (window+1)*window_height
             win_y_high = image.shape[0] - window*window_height
-            win_xleft_low = leftx_current - self.nmargin
-            win_xleft_high = leftx_current + self.nmargin
-            win_xright_low = rightx_current - self.nmargin
-            win_xright_high = rightx_current + self.nmargin
+            win_xleft_low = leftx_current - self.margin
+            win_xleft_high = leftx_current + self.margin
+            win_xright_low = rightx_current - self.margin
+            win_xright_high = rightx_current + self.margin
 
             # Draw the windows on the visualization image not needed in the final pipeline
             cv2.rectangle(out_img, (win_xleft_low, win_y_low),
@@ -123,7 +124,42 @@ class LaneFinding(PipeLineInterface):
         righty = nonzeroy[right_lane_inds]
 
         return leftx, lefty, rightx, righty, out_img
+    
+    def getAverageCurvature(self):
+        return self.curve_msg
+    
+    def getOffsetMsg(self):
+        return self.offset_msg
+    
+    def calculateMetaData(self, img_size, left_x_predictions, right_x_predictions):
+        num_rows, num_cols = self.img_size[0], self.img_size[1]
+        def measure_radius_of_curvature(x_values):
+            ym_per_pix = 30/720 # meters per pixel in y dimension
+            xm_per_pix = 3.7/700 # meters per pixel in x dimension
+            # If no pixels were found return None
+            y_points = np.linspace(0, num_rows-1, num_rows)
+            y_eval = np.max(y_points)
 
+            # Fit new polynomials to x,y in world space
+            fit_cr = np.polyfit(y_points*ym_per_pix, x_values*xm_per_pix, 2)
+            curverad = ((1 + (2*fit_cr[0]*y_eval*ym_per_pix + fit_cr[1])**2)**1.5) / np.absolute(2*fit_cr[0])
+            return curverad
+        
+        if self.left_fit is None or self.right_fit is None:
+            raise ValueError("have not processes an image yet")
+        
+        left_curve_rad = measure_radius_of_curvature(left_x_predictions)
+        right_curve_rad = measure_radius_of_curvature(right_x_predictions)
+        average_curve_rad = (left_curve_rad + right_curve_rad)/2
+        curvature_string = "Radius of curvature: %.2f m" % average_curve_rad
+
+        # compute the offset from the center
+        lane_center = (right_x_predictions[-1] + left_x_predictions[-1])/2
+        xm_per_pix = 3.7/700 # meters per pixel in x dimension
+        center_offset_pixels = abs(img_size[0]/2 - lane_center)
+        center_offset_mtrs = xm_per_pix*center_offset_pixels
+        offset_string = "Center offset: %.2f m" % center_offset_mtrs
+        return curvature_string, offset_string
 
     def process(self, image):
         '''
@@ -131,38 +167,30 @@ class LaneFinding(PipeLineInterface):
         :param image: a perspective transformed binary warped image
         :return: images with lane line highlighted
         '''
-        if not self.left_fit or not self.right_fit:
+        self.img_size = image.shape
+        if self.left_fit is None or self.right_fit is None:
             leftx, lefty, rightx, righty, _ = self.slidingWindowFindLanePixel(image)
         else:
             leftx, lefty, rightx, righty, _ = self.searchAroundPoly(image)
 
         left_fitx, right_fitx, ploty = self.fitPoly(image.shape, leftx, lefty, rightx, righty)
-
+        
+        self.curve_msg, self.offset_msg = self.calculateMetaData(image.shape, left_fitx, right_fitx)
         ### Visualization ##
         # Create an image to draw on and an image to show the selection window
-        out_img = np.dstack((image, image, image))*255
-        window_img = np.zeros_like(out_img)
-        # Color in left and right line pixels
-        out_img[leftx, lefty] = [255, 0, 0]
-        out_img[rightx, righty] = [0, 0, 255]
-
-        # Generate a polygon to illustrate the search window area
-        # And recast the x and y points into usable format for cv2.fillPoly()
-        left_line_window1 = np.array([np.transpose(np.vstack([left_fitx-self.margin, ploty]))])
-        left_line_window2 = np.array([np.flipud(np.transpose(np.vstack([left_fitx+self.margin,
-                                  ploty])))])
-        left_line_pts = np.hstack((left_line_window1, left_line_window2))
-        right_line_window1 = np.array([np.transpose(np.vstack([right_fitx-self.margin, ploty]))])
-        right_line_window2 = np.array([np.flipud(np.transpose(np.vstack([right_fitx+self.margin, ploty])))])
-        right_line_pts = np.hstack((right_line_window1, right_line_window2))
+        warp_zero = np.zeros_like(image).astype(np.uint8)
+        color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
+        
+        # Recast the x and y points into usable format for cv2.fillPoly()
+        pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
+        pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
+        pts = np.hstack((pts_left, pts_right))
 
         # Draw the lane onto the warped blank image
-        cv2.fillPoly(window_img, np.int_([left_line_pts]), (0,255, 0))
-        cv2.fillPoly(window_img, np.int_([right_line_pts]), (0,255, 0))
-        result = cv2.addWeighted(out_img, 1, window_img, 0.3, 0)
+        cv2.fillPoly(color_warp, np.int_([pts]), (0,255, 0))
 
 
         ## End visualization steps ##
 
 
-        return result
+        return color_warp

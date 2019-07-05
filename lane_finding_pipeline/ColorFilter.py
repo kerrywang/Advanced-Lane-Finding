@@ -22,12 +22,10 @@ class ColorFilter(PipeLineInterface):
         else:  # gray scale image
             return cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
-
         # return imageBase
-        # result = np.zeros_like(imageBase)
-        # result[(imageBase > self.minThresh) & (imageBase <= self.maxThresh)] = 1.0
-        #
-        # return np.float64(result)
+        result = np.zeros_like(imageBase)
+        result[(imageBase > self.minThresh) & (imageBase <= self.maxThresh)] = True
+        return result.astype(bool)
 
 if __name__ == "__main__":
     image = cv2.imread(os.path.join(constant.getTestImagesDir(), "test1.jpg"))

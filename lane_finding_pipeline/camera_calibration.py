@@ -25,7 +25,6 @@ class CameraCalibration(PipeLineInterface):
         for test_image in os.listdir(constant.getCameraCalibrationFolderPath()):
             dirPath = constant.getCameraCalibrationFolderPath()
             fullImgPath = os.path.join(dirPath, test_image)
-            print (fullImgPath)
             img = cv2.imread(fullImgPath)
 
             grayscale = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
